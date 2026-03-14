@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrackPulse — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root[data-theme="dark"]{
+  --bg:#080c16;--bg-s:#0f1624;--bg-e:#1a2235;--bg-h:#1e2840;
+  --border:rgba(255,255,255,0.07);--border-s:rgba(255,255,255,0.13);
+  --text:#e4eaf8;--text-m:#6e7e9c;--text-d:#2d3a54;
+  --accent:#5b6cf0;--accent-bg:rgba(91,108,240,0.1);
+  --ok:#10b981;--ok-bg:rgba(16,185,129,0.1);
+  --warn:#f59e0b;--warn-bg:rgba(245,158,11,0.1);
+  --err:#ef4444;--err-bg:rgba(239,68,68,0.1);
+  --info:#06b6d4;--info-bg:rgba(6,182,212,0.1);
+  --purple:#a855f7;--purple-bg:rgba(168,85,247,0.1);
+  --pink:#ec4899;--pink-bg:rgba(236,72,153,0.1);
+  --chart-grid:rgba(255,255,255,0.04);
+  --chart-label:#6e7e9c;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+:root[data-theme="light"]{
+  --bg:#f1f5fb;--bg-s:#ffffff;--bg-e:#f8faff;--bg-h:#eef2ff;
+  --border:rgba(0,0,0,0.07);--border-s:rgba(0,0,0,0.13);
+  --text:#0f172a;--text-m:#64748b;--text-d:#94a3b8;
+  --accent:#4f60d8;--accent-bg:rgba(79,96,216,0.08);
+  --ok:#059669;--ok-bg:rgba(5,150,105,0.08);
+  --warn:#d97706;--warn-bg:rgba(217,119,6,0.08);
+  --err:#dc2626;--err-bg:rgba(220,38,38,0.08);
+  --info:#0891b2;--info-bg:rgba(8,145,178,0.08);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,0.08);
+  --pink:#db2777;--pink-bg:rgba(219,39,119,0.08);
+  --chart-grid:rgba(0,0,0,0.05);
+  --chart-label:#64748b;
+  --shadow:0 4px 24px rgba(0,0,0,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;overflow-x:hidden;}
+a{color:var(--accent);text-decoration:none;}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit;font-size:inherit;}
+code,pre{font-family:'SF Mono','Fira Code','Cascadia Code',monospace;font-size:12px;}
+
+.app{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;min-width:220px;background:var(--bg-s);border-right:0.5px solid var(--border);
+  display:flex;flex-direction:column;padding:0;position:relative;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;padding:18px 16px 16px;
+  border-bottom:0.5px solid var(--border);
+}
+.logo-icon{
+  width:28px;height:28px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;letter-spacing:-0.5px;
+}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
+.logo-badge{font-size:9px;background:var(--accent-bg);color:var(--accent);padding:2px 6px;border-radius:4px;margin-left:auto;}
+
+.client-switcher{
+  margin:12px 12px 6px;padding:10px 12px;background:var(--bg-e);border-radius:10px;
+  border:0.5px solid var(--border);cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:border-color 0.15s;
+}
+.client-switcher:hover{border-color:var(--border-s);}
+.client-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+.client-info{flex:1;min-width:0;}
+.client-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.client-domain{font-size:11px;color:var(--text-m);}
+.chevron{color:var(--text-m);font-size:10px;margin-left:auto;}
+
+.nav{padding:8px 8px;flex:1;}
+.nav-section{margin-bottom:20px;}
+.nav-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-d);padding:0 8px;margin-bottom:6px;}
+.nav-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+  cursor:pointer;color:var(--text-m);transition:all 0.12s;margin-bottom:2px;user-select:none;
+}
+.nav-item:hover{background:var(--bg-e);color:var(--text);}
+.nav-item.active{background:var(--accent-bg);color:var(--accent);}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;}
+.nav-badge{margin-left:auto;font-size:10px;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;}
+
+.sidebar-clients{padding:8px 12px 12px;}
+.clients-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.clients-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-d);padding:0 2px;}
+.add-btn{width:20px;height:20px;border-radius:5px;background:var(--bg-e);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-m);cursor:pointer;transition:all 0.12s;}
+.add-btn:hover{border-color:var(--accent);color:var(--accent);}
+.client-item{
+  display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;
+  cursor:pointer;transition:background 0.12s;margin-bottom:2px;
+}
+.client-item:hover{background:var(--bg-e);}
+.client-item.selected{background:var(--accent-bg);}
+.client-avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+.client-item-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.client-item-plan{font-size:10px;color:var(--text-m);margin-top:1px;}
+
+.sidebar-footer{padding:12px;border-top:0.5px solid var(--border);}
+
+/* MAIN CONTENT */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+.topbar{
+  height:54px;background:var(--bg-s);border-bottom:0.5px solid var(--border);
+  display:flex;align-items:center;gap:12px;padding:0 20px;position:sticky;top:0;z-index:10;
+}
+.topbar-title{font-size:14px;font-weight:600;margin-right:4px;}
+.topbar-domain{font-size:12px;color:var(--text-m);}
+.topbar-divider{width:0.5px;height:18px;background:var(--border-s);margin:0 4px;}
+.date-range{
+  display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;
+  border:0.5px solid var(--border);background:var(--bg-e);cursor:pointer;transition:border-color 0.12s;
+  font-size:12px;color:var(--text-m);
+}
+.date-range:hover{border-color:var(--border-s);}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.icon-btn{
+  width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);
+  background:var(--bg-e);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.12s;color:var(--text-m);
+}
+.icon-btn:hover{border-color:var(--border-s);color:var(--text);}
+.btn{
+  display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;
+  border:0.5px solid var(--border-s);background:var(--bg-e);
+  cursor:pointer;font-size:12px;font-weight:500;transition:all 0.12s;
+}
+.btn:hover{background:var(--bg-h);border-color:var(--accent);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-primary:hover{opacity:0.9;background:var(--accent);}
+.realtime-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* VIEWS */
+.view{display:none;padding:20px;}
+.view.active{display:block;}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+.stat-card{
+  background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;
+  padding:16px;transition:border-color 0.15s;
+}
+.stat-card:hover{border-color:var(--border-s);}
+.stat-label{font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
+.stat-value{font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px;}
+.stat-trend{font-size:11px;display:flex;align-items:center;gap:4px;}
+.trend-up{color:var(--ok);}
+.trend-down{color:var(--err);}
+
+/* CHARTS ROW */
+.charts-row{display:grid;grid-template-columns:1fr 320px;gap:12px;margin-bottom:20px;}
+.chart-card{
+  background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;padding:16px;
+}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:4px;}
+.chart-subtitle{font-size:11px;color:var(--text-m);margin-bottom:16px;}
+
+/* SOURCE LEGEND */
+.source-legend{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.legend-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.legend-item:last-child{border-bottom:none;}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.legend-name{flex:1;font-size:12px;}
+.legend-pct{font-size:12px;font-weight:500;color:var(--text-m);}
+.legend-bar-wrap{width:60px;height:4px;background:var(--border-s);border-radius:2px;overflow:hidden;}
+.legend-bar{height:100%;border-radius:2px;}
+
+/* TABLES */
+.table-card{background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);}
+.table-title{font-size:13px;font-weight:600;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-m);padding:10px 16px;text-align:left;border-bottom:0.5px solid var(--border);}
+td{padding:11px 16px;border-bottom:0.5px solid var(--border);font-size:12px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg-e);}
+.url-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;color:var(--accent);}
+.badge{
+  display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;
+  font-size:10px;font-weight:500;
+}
+.badge-ok{background:var(--ok-bg);color:var(--ok);}
+.badge-warn{background:var(--warn-bg);color:var(--warn);}
+.badge-err{background:var(--err-bg);color:var(--err);}
+.badge-info{background:var(--info-bg);color:var(--info);}
+.badge-accent{background:var(--accent-bg);color:var(--accent);}
+.badge-purple{background:var(--purple-bg);color:var(--purple);}
+
+/* BOTTOM GRID */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+
+/* REALTIME VIEW */
+.realtime-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.realtime-count{font-size:48px;font-weight:700;letter-spacing:-2px;color:var(--ok);}
+.realtime-label{font-size:13px;color:var(--text-m);}
+.realtime-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+
+/* SCRIPT VIEW */
+.script-container{background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;margin-top:16px;}
+.script-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--border);background:var(--bg-e);}
+.script-lang{font-size:11px;color:var(--text-m);}
+.script-code{
+  background:var(--bg);padding:20px;overflow-x:auto;
+  color:var(--text);line-height:1.7;
+}
+.sc-comment{color:var(--text-m);}
+.sc-key{color:#79c0ff;}
+.sc-str{color:#a5d6ff;}
+.sc-func{color:var(--accent);}
+.sc-num{color:var(--ok);}
+.setup-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.step-card{
+  background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;
+  padding:16px;display:flex;flex-direction:column;gap:8px;
+}
+.step-num{
+  width:28px;height:28px;border-radius:8px;background:var(--accent-bg);
+  color:var(--accent);font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.step-title{font-size:12px;font-weight:600;}
+.step-desc{font-size:11px;color:var(--text-m);}
+
+/* GEO TABLE */
+.geo-grid{display:flex;flex-direction:column;gap:8px;}
+.geo-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.geo-item:last-child{border-bottom:none;}
+.geo-flag{font-size:18px;width:24px;text-align:center;}
+.geo-country{font-size:12px;font-weight:500;flex:1;}
+.geo-visits{font-size:12px;color:var(--text-m);}
+.geo-bar-wrap{width:80px;height:4px;background:var(--border-s);border-radius:2px;overflow:hidden;}
+.geo-bar{height:100%;border-radius:2px;background:var(--accent);}
+
+/* CLIENT MANAGEMENT */
+.clients-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.client-card{
+  background:var(--bg-s);border:0.5px solid var(--border);border-radius:14px;
+  padding:20px;transition:border-color 0.15s,transform 0.15s;cursor:pointer;
+}
+.client-card:hover{border-color:var(--border-s);transform:translateY(-1px);}
+.client-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.client-card-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
+.client-card-status{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ok);}
+.client-card-name{font-size:14px;font-weight:600;margin-bottom:2px;}
+.client-card-domain{font-size:11px;color:var(--text-m);margin-bottom:12px;}
+.client-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.client-stat{background:var(--bg-e);border-radius:8px;padding:8px 10px;}
+.client-stat-val{font-size:14px;font-weight:600;}
+.client-stat-lbl{font-size:10px;color:var(--text-m);}
+
+/* CAMPAIGN VIEW */
+.campaign-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.source-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:500;}
+
+/* TOGGLE */
+.toggle-group{display:flex;background:var(--bg-e);border-radius:8px;padding:3px;border:0.5px solid var(--border);}
+.toggle-btn{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.12s;color:var(--text-m);}
+.toggle-btn.active{background:var(--bg-s);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:20px;}
+.page-title{font-size:17px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px;}
+.page-desc{font-size:12px;color:var(--text-m);}
+
+/* INPUT */
+.input{
+  width:100%;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border);
+  background:var(--bg-e);color:var(--text);font-size:12px;font-family:inherit;outline:none;
+  transition:border-color 0.15s;
+}
+.input:focus{border-color:var(--accent);}
+.input-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.input-label{font-size:11px;color:var(--text-m);}
+
+/* MODAL BACKDROP */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  align-items:center;justify-content:center;z-index:100;
+}
+.modal-backdrop.open{display:flex;}
+.modal{background:var(--bg-s);border:0.5px solid var(--border-s);border-radius:16px;padding:24px;width:440px;max-width:90vw;}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--text-m);margin-bottom:20px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* REPORT EXPORT */
+.report-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.report-card{
+  background:var(--bg-s);border:0.5px solid var(--border);border-radius:12px;
+  padding:20px;cursor:pointer;transition:all 0.15s;
+}
+.report-card:hover{border-color:var(--accent);background:var(--accent-bg);}
+.report-icon{width:36px;height:36px;border-radius:10px;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;color:var(--accent);}
+.report-title{font-size:13px;font-weight:600;margin-bottom:4px;}
+.report-desc{font-size:11px;color:var(--text-m);}
+
+/* NOTIFICATION TOAST */
+.toast{
+  position:fixed;bottom:20px;right:20px;background:var(--bg-e);border:0.5px solid var(--border-s);
+  border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:8px;
+  font-size:12px;box-shadow:var(--shadow);z-index:200;transform:translateY(60px);
+  transition:transform 0.2s ease;
+}
+.toast.show{transform:translateY(0);}
+.toast-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">TP</div>
+    <span class="logo-text">TrackPulse</span>
+    <span class="logo-badge">BETA</span>
+  </div>
+
+  <div class="client-switcher" onclick="toggleClientDropdown()">
+    <div class="client-dot" id="sidebar-dot"></div>
+    <div class="client-info">
+      <div class="client-name" id="sidebar-client-name">TechCorp Inc</div>
+      <div class="client-domain" id="sidebar-client-domain">techcorp.io</div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">
+      <div class="nav-label">Analytics</div>
+      <div class="nav-item active" onclick="showView('overview',this)" id="nav-overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" onclick="showView('realtime',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Real-time
+        <span class="nav-badge" id="rt-badge">4</span>
+      </div>
+      <div class="nav-item" onclick="showView('sources',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 1 0 20M12 2a14.5 14.5 0 0 0 0 20M2 12h20"/></svg>
+        Traffic Sources
+      </div>
+      <div class="nav-item" onclick="showView('campaigns',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Campaigns
+      </div>
+      <div class="nav-item" onclick="showView('pages',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        Top Pages
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Management</div>
+      <div class="nav-item" onclick="showView('clients',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clients
+      </div>
+      <div class="nav-item" onclick="showView('setup',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Tracking Setup
+      </div>
+      <div class="nav-item" onclick="showView('reports',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Export Reports
+      </div>
+    </div>
+  </nav>
+
+  <div class="sidebar-clients">
+    <div class="clients-header">
+      <span class="clients-title">Clients</span>
+      <div class="add-btn" onclick="openAddClient()" title="Add client">+</div>
+    </div>
+    <div id="client-list"></div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="nav-item" onclick="toggleTheme()" style="margin-bottom:0;">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="theme-label">Light Mode</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-client">TechCorp Inc</span>
+    <span class="topbar-divider"></span>
+    <span class="topbar-domain" id="topbar-domain">techcorp.io</span>
+    <span class="topbar-divider"></span>
+    <div class="date-range">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Last 30 days
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="topbar-actions">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);">
+        <span class="realtime-dot"></span>
+        <span id="rt-count">4 live</span>
+      </div>
+      <div class="topbar-divider"></div>
+      <div class="icon-btn" title="Notifications">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div class="icon-btn" title="Settings" onclick="showView('setup',null)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW VIEW -->
+  <div class="view active" id="view-overview">
+    <div class="page-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div class="page-title">Dashboard Overview</div>
+          <div class="page-desc">Traffic performance for the last 30 days</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="toggle-group">
+            <div class="toggle-btn active">Daily</div>
+            <div class="toggle-btn">Weekly</div>
+            <div class="toggle-btn">Monthly</div>
+          </div>
+          <button class="btn btn-primary" onclick="showView('reports',null)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Traffic Trend</div>
+        <div class="chart-subtitle">Daily visitors over the last 30 days</div>
+        <div style="position:relative;height:220px;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Traffic Sources</div>
+        <div class="chart-subtitle">Breakdown by acquisition channel</div>
+        <div style="position:relative;height:140px;">
+          <canvas id="sourceChart"></canvas>
+        </div>
+        <div class="source-legend" id="source-legend"></div>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="chart-card">
+        <div class="chart-title">Device Breakdown</div>
+        <div class="chart-subtitle">Sessions by device type</div>
+        <div style="position:relative;height:160px;">
+          <canvas id="deviceChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Geographic Distribution</div>
+        <div class="chart-subtitle">Top countries by visitors</div>
+        <div class="geo-grid" id="geo-grid" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Top Pages</div>
+        <button class="btn" onclick="showView('pages',null)">View All →</button>
+      </div>
+      <div class="table-wrap">
+        <table id="top-pages-table">
+          <thead><tr>
+            <th>Page URL</th><th>Visits</th><th>Unique</th><th>Bounce Rate</th><th>Avg Time</th><th>Trend</th>
+          </tr></thead>
+          <tbody id="top-pages-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REAL-TIME VIEW -->
+  <div class="view" id="view-realtime">
+    <div class="page-header">
+      <div class="page-title">Real-time Analytics</div>
+      <div class="page-desc">Active visitors on the site right now</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:24px;">
+      <div class="realtime-count" id="rt-big-count">4</div>
+      <div style="padding-bottom:8px;">
+        <div style="font-size:14px;font-weight:500;">active visitors</div>
+        <div style="font-size:11px;color:var(--text-m);">Updated in real time</div>
+      </div>
+      <div style="margin-left:auto;padding-bottom:8px;text-align:right;">
+        <div style="font-size:12px;color:var(--text-m);">Pageviews last 30 min</div>
+        <div style="font-size:18px;font-weight:600;" id="rt-pv30">47</div>
+      </div>
+    </div>
+    <div class="realtime-grid">
+      <div class="stat-card">
+        <div class="stat-label">From Google Ads</div>
+        <div class="stat-value" id="rt-google">1</div>
+        <div class="stat-trend trend-up">▲ Active now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">From SEO</div>
+        <div class="stat-value" id="rt-seo">2</div>
+        <div class="stat-trend trend-up">▲ Active now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Social Media</div>
+        <div class="stat-value" id="rt-social">1</div>
+        <div class="stat-trend trend-up">▲ Active now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Direct</div>
+        <div class="stat-value" id="rt-direct">0</div>
+        <div class="stat-trend" style="color:var(--text-m);">— Idle</div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Live Visitor Feed</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ok);"><span class="realtime-dot"></span>Live</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Page</th><th>Source</th><th>Country</th><th>Device</th><th>Duration</th></tr></thead>
+          <tbody id="live-feed"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRAFFIC SOURCES VIEW -->
+  <div class="view" id="view-sources">
+    <div class="page-header">
+      <div class="page-title">Traffic Sources</div>
+      <div class="page-desc">Channel attribution and acquisition breakdown</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="source-stat-cards"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="chart-card">
+        <div class="chart-title">Source Distribution</div>
+        <div class="chart-subtitle">% of total traffic</div>
+        <div style="position:relative;height:260px;">
+          <canvas id="sourcePieChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Source Trend (30 days)</div>
+        <div class="chart-subtitle">Traffic by channel over time</div>
+        <div style="position:relative;height:260px;">
+          <canvas id="sourceTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><div class="table-title">Channel Performance</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Channel</th><th>Visitors</th><th>% of Total</th><th>Bounce Rate</th><th>Conv. Rate</th><th>Revenue</th></tr></thead>
+          <tbody id="channel-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMPAIGNS VIEW -->
+  <div class="view" id="view-campaigns">
+    <div class="page-header">
+      <div class="page-title">Campaign Performance</div>
+      <div class="page-desc">UTM-tracked campaigns and attribution</div>
+    </div>
+    <div class="campaign-metrics" id="campaign-metrics"></div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Active Campaigns</div>
+        <button class="btn btn-primary" onclick="showToast('Campaign export started')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Campaign</th><th>Source</th><th>Medium</th><th>Clicks</th><th>Conversions</th><th>Conv. Rate</th><th>Cost</th><th>CPA</th><th>Status</th></tr></thead>
+          <tbody id="campaign-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGES VIEW -->
+  <div class="view" id="view-pages">
+    <div class="page-header">
+      <div class="page-title">Top Pages</div>
+      <div class="page-desc">Most visited pages and content performance</div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Page Performance</div>
+        <div style="display:flex;gap:8px;">
+          <input class="input" placeholder="Search pages..." style="width:200px;" oninput="filterPages(this.value)">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Page URL</th><th>Visits</th><th>Unique</th><th>Bounce Rate</th><th>Avg Time</th><th>Exit Rate</th></tr></thead>
+          <tbody id="all-pages-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTS VIEW -->
+  <div class="view" id="view-clients">
+    <div class="page-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div class="page-title">Client Management</div>
+          <div class="page-desc">Manage websites and client accounts</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddClient()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Client
+        </button>
+      </div>
+    </div>
+    <div class="clients-grid" id="clients-grid"></div>
+  </div>
+
+  <!-- SETUP VIEW -->
+  <div class="view" id="view-setup">
+    <div class="page-header">
+      <div class="page-title">Tracking Setup</div>
+      <div class="page-desc">Install the tracking pixel on your client's website</div>
+    </div>
+    <div class="setup-steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-title">Copy the Script</div>
+        <div class="step-desc">Copy the tracking pixel below and save it as a .js file or embed it directly.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-title">Add to Website</div>
+        <div class="step-desc">Paste the script tag inside the &lt;head&gt; of every page you want to track.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-title">Verify Data</div>
+        <div class="step-desc">Visit your site and check Real-time view to confirm hits are being recorded.</div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="input-group">
+        <label class="input-label">Select Client Website</label>
+        <select class="input" id="script-client-select" onchange="updateScript()">
+          <option value="c1">TechCorp Inc — techcorp.io</option>
+          <option value="c2">StyleHouse — stylehouse.com</option>
+          <option value="c3">MedCenter — medcenter.health</option>
+        </select>
+      </div>
+    </div>
+    <div class="script-container">
+      <div class="script-toolbar">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+          <span class="script-lang" style="margin-left:8px;">trackpulse.js — Tracking Pixel</span>
+        </div>
+        <button class="btn" onclick="copyScript()" id="copy-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Script
+        </button>
+      </div>
+      <pre class="script-code" id="script-code"></pre>
+    </div>
+    <div style="margin-top:16px;padding:14px 16px;background:var(--info-bg);border:0.5px solid var(--info);border-radius:10px;">
+      <div style="font-size:12px;font-weight:600;color:var(--info);margin-bottom:4px;">HTML Embed</div>
+      <code style="font-size:12px;color:var(--text);">&lt;script src="https://cdn.trackpulse.io/pixel.js?id=<span id="embed-id" style="color:var(--accent);">SITE_ID</span>" async&gt;&lt;/script&gt;</code>
+    </div>
+  </div>
+
+  <!-- REPORTS VIEW -->
+  <div class="view" id="view-reports">
+    <div class="page-header">
+      <div class="page-title">Export Reports</div>
+      <div class="page-desc">Generate and share analytics reports with clients</div>
+    </div>
+    <div class="report-cards">
+      <div class="report-card" onclick="showToast('PDF report generated — downloading...')">
+        <div class="report-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="report-title">PDF Report</div>
+        <div class="report-desc">Full analytics summary with charts, traffic breakdown, and campaign performance.</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--accent);">↓ Download PDF</div>
+      </div>
+      <div class="report-card" onclick="copyShareLink()">
+        <div class="report-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </div>
+        <div class="report-title">Shareable Link</div>
+        <div class="report-desc">Generate a read-only dashboard link to share directly with your client.</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--accent);">⧉ Copy Share Link</div>
+      </div>
+      <div class="report-card" onclick="showToast('Weekly email report scheduled')">
+        <div class="report-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="report-title">Weekly Email Report</div>
+        <div class="report-desc">Automated weekly digest sent every Monday with traffic summary.</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--accent);">✉ Schedule Weekly</div>
+      </div>
+      <div class="report-card" onclick="showToast('Monthly report scheduled')">
+        <div class="report-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="report-title">Monthly Report</div>
+        <div class="report-desc">Comprehensive monthly performance review with SEO vs Ads comparison.</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--accent);">📅 Schedule Monthly</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">SEO vs Paid Traffic — 30 Day Comparison</div>
+      <div class="chart-subtitle">Organic search vs paid advertising performance</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="seoVsPaidChart"></canvas>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- ADD CLIENT MODAL -->
+<div class="modal-backdrop" id="add-client-modal">
+  <div class="modal">
+    <div class="modal-title">Add New Client</div>
+    <div class="modal-sub">Set up a new website tracking account for your client.</div>
+    <div class="input-group">
+      <label class="input-label">Client / Company Name</label>
+      <input class="input" id="new-client-name" placeholder="e.g. Acme Corporation">
+    </div>
+    <div class="input-group">
+      <label class="input-label">Website URL</label>
+      <input class="input" id="new-client-url" placeholder="e.g. https://acme.com">
+    </div>
+    <div class="input-group">
+      <label class="input-label">Industry</label>
+      <select class="input" id="new-client-industry">
+        <option>SaaS</option><option>eCommerce</option><option>Healthcare</option>
+        <option>Finance</option><option>Real Estate</option><option>Education</option><option>Other</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Plan</label>
+      <select class="input">
+        <option>Starter — $29/mo</option>
+        <option selected>Pro — $79/mo</option>
+        <option>Business — $199/mo</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddClient()">Cancel</button>
+      <button class="btn btn-primary" onclick="addClient()">Create Client + Generate Pixel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg">Done</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const COLORS = {
+  googleAds:'#5b6cf0', seo:'#10b981', socialAds:'#f59e0b',
+  direct:'#06b6d4', email:'#a855f7', referral:'#ec4899',
+  linkedin:'#0a66c2', tiktok:'#ff0050'
+};
+
+const clientData = {
+  c1: {
+    name:'TechCorp Inc', domain:'techcorp.io', industry:'SaaS', plan:'Pro', color:'#5b6cf0',
+    overview:{
+      totalVisitors:48291, uniqueVisitors:31447, pageViews:124893,
+      bounceRate:42.3, conversionRate:3.8, avgSession:'2m 34s',
+      trends:{tv:+12.4, uv:+8.9, pv:+15.2, br:-3.1, cr:+0.6}
+    },
+    sources:[
+      {name:'Google Ads',key:'googleAds',pct:35,visits:16902,bounce:38,conv:4.8,revenue:'$24,120'},
+      {name:'Organic SEO',key:'seo',pct:28,visits:13521,bounce:41,conv:3.2,revenue:'$18,340'},
+      {name:'Social Ads',key:'socialAds',pct:18,visits:8692,bounce:52,conv:2.1,revenue:'$8,910'},
+      {name:'Direct',key:'direct',pct:11,visits:5312,bounce:35,conv:5.1,revenue:'$9,840'},
+      {name:'Email',key:'email',pct:5,visits:2415,bounce:28,conv:6.8,revenue:'$5,280'},
+      {name:'Referral',key:'referral',pct:3,visits:1449,bounce:44,conv:2.9,revenue:'$1,920'},
+    ],
+    campaigns:[
+      {name:'Summer Launch Q3',source:'Google',medium:'cpc',clicks:8420,conv:342,convRate:'4.1%',cost:'$4,210',cpa:'$12.31',status:'active'},
+      {name:'Brand Awareness Aug',source:'Facebook',medium:'social',clicks:5241,conv:187,convRate:'3.6%',cost:'$2,890',cpa:'$15.45',status:'active'},
+      {name:'Retargeting Aug',source:'Google',medium:'display',clicks:3182,conv:156,convRate:'4.9%',cost:'$1,840',cpa:'$11.79',status:'paused'},
+      {name:'LinkedIn B2B',source:'LinkedIn',medium:'social',clicks:1891,conv:94,convRate:'5.0%',cost:'$3,200',cpa:'$34.04',status:'active'},
+      {name:'TikTok Awareness',source:'TikTok',medium:'social',clicks:4821,conv:89,convRate:'1.8%',cost:'$1,200',cpa:'$13.48',status:'ended'},
+    ],
+    pages:[
+      {url:'/homepage',visits:18432,unique:12841,bounce:'38%',avgTime:'3m 12s',exit:'22%'},
+      {url:'/pricing',visits:9841,unique:7293,bounce:'52%',avgTime:'2m 45s',exit:'41%'},
+      {url:'/features',visits:7293,unique:5182,bounce:'41%',avgTime:'4m 18s',exit:'28%'},
+      {url:'/blog/getting-started',visits:5182,unique:4891,bounce:'35%',avgTime:'5m 42s',exit:'31%'},
+      {url:'/demo',visits:4738,unique:4738,bounce:'28%',avgTime:'6m 09s',exit:'18%'},
+      {url:'/about',visits:3291,unique:2810,bounce:'61%',avgTime:'1m 22s',exit:'58%'},
+      {url:'/contact',visits:2847,unique:2632,bounce:'45%',avgTime:'2m 08s',exit:'39%'},
+      {url:'/blog/case-studies',visits:2143,unique:2089,bounce:'32%',avgTime:'6m 31s',exit:'24%'},
+    ],
+    geo:[
+      {flag:'🇺🇸',country:'United States',visits:21847,pct:45.2},
+      {flag:'🇬🇧',country:'United Kingdom',visits:7729,pct:16.0},
+      {flag:'🇩🇪',country:'Germany',visits:4829,pct:10.0},
+      {flag:'🇨🇦',country:'Canada',visits:3863,pct:8.0},
+      {flag:'🇦🇺',country:'Australia',visits:2897,pct:6.0},
+    ],
+    devices:{Desktop:58,Mobile:34,Tablet:8},
+    browsers:{Chrome:62,Safari:22,Firefox:9,Edge:5,Other:2},
+  },
+  c2: {
+    name:'StyleHouse', domain:'stylehouse.com', industry:'eCommerce', plan:'Business', color:'#10b981',
+    overview:{
+      totalVisitors:92841,uniqueVisitors:67210,pageViews:284710,
+      bounceRate:55.1,conversionRate:2.4,avgSession:'1m 58s',
+      trends:{tv:+22.1,uv:+18.3,pv:+28.7,br:+2.4,cr:-0.3}
+    },
+    sources:[
+      {name:'Social Ads',key:'socialAds',pct:42,visits:39013,bounce:58,conv:2.1,revenue:'$52,340'},
+      {name:'Google Ads',key:'googleAds',pct:24,visits:22282,bounce:51,conv:2.8,revenue:'$38,120'},
+      {name:'Organic SEO',key:'seo',pct:18,visits:16711,bounce:44,conv:3.1,revenue:'$28,910'},
+      {name:'Direct',key:'direct',pct:10,visits:9284,bounce:38,conv:3.9,revenue:'$18,840'},
+      {name:'Email',key:'email',pct:4,visits:3714,bounce:31,conv:5.2,revenue:'$12,280'},
+      {name:'Referral',key:'referral',pct:2,visits:1857,bounce:48,conv:1.9,revenue:'$3,920'},
+    ],
+    campaigns:[
+      {name:'Summer Collection',source:'Instagram',medium:'social',clicks:18420,conv:892,convRate:'4.8%',cost:'$8,210',cpa:'$9.21',status:'active'},
+      {name:'Google Shopping',source:'Google',medium:'shopping',clicks:12241,conv:487,convRate:'3.9%',cost:'$5,890',cpa:'$12.09',status:'active'},
+      {name:'Email: July Sale',source:'Email',medium:'email',clicks:6182,conv:356,convRate:'5.8%',cost:'$480',cpa:'$1.35',status:'ended'},
+    ],
+    pages:[
+      {url:'/new-arrivals',visits:38241,unique:31092,bounce:'48%',avgTime:'2m 42s',exit:'29%'},
+      {url:'/sale',visits:24182,unique:19284,bounce:'61%',avgTime:'1m 58s',exit:'44%'},
+      {url:'/dresses',visits:18291,unique:14839,bounce:'52%',avgTime:'3m 18s',exit:'32%'},
+      {url:'/cart',visits:12847,unique:11293,bounce:'22%',avgTime:'4m 12s',exit:'38%'},
+      {url:'/checkout',visits:8492,unique:8492,bounce:'15%',avgTime:'5m 41s',exit:'42%'},
+    ],
+    geo:[
+      {flag:'🇺🇸',country:'United States',visits:43129,pct:46.5},
+      {flag:'🇦🇺',country:'Australia',visits:12847,pct:13.8},
+      {flag:'🇨🇦',country:'Canada',visits:9284,pct:10.0},
+      {flag:'🇬🇧',country:'United Kingdom',visits:7427,pct:8.0},
+      {flag:'🇫🇷',country:'France',visits:4642,pct:5.0},
+    ],
+    devices:{Desktop:32,Mobile:61,Tablet:7},
+    browsers:{Chrome:58,Safari:28,Firefox:7,Edge:4,Other:3},
+  },
+  c3: {
+    name:'MedCenter', domain:'medcenter.health', industry:'Healthcare', plan:'Pro', color:'#f59e0b',
+    overview:{
+      totalVisitors:18472,uniqueVisitors:14291,pageViews:52840,
+      bounceRate:38.2,conversionRate:5.6,avgSession:'3m 47s',
+      trends:{tv:+6.2,uv:+4.8,pv:+8.1,br:-1.8,cr:+1.2}
+    },
+    sources:[
+      {name:'Organic SEO',key:'seo',pct:48,visits:8867,bounce:35,conv:6.1,revenue:'$31,240'},
+      {name:'Direct',key:'direct',pct:22,visits:4064,bounce:28,conv:7.2,revenue:'$18,110'},
+      {name:'Google Ads',key:'googleAds',pct:18,visits:3325,bounce:42,conv:4.8,revenue:'$14,840'},
+      {name:'Referral',key:'referral',pct:8,visits:1478,bounce:41,conv:4.2,revenue:'$4,920'},
+      {name:'Email',key:'email',pct:4,visits:739,bounce:22,conv:9.1,revenue:'$5,280'},
+    ],
+    campaigns:[
+      {name:'Local SEO Boost',source:'Google',medium:'cpc',clicks:2420,conv:142,convRate:'5.9%',cost:'$1,210',cpa:'$8.52',status:'active'},
+      {name:'Patient Referrals',source:'Email',medium:'email',clicks:982,conv:89,convRate:'9.1%',cost:'$240',cpa:'$2.70',status:'active'},
+    ],
+    pages:[
+      {url:'/appointments',visits:8472,unique:7291,bounce:'28%',avgTime:'4m 12s',exit:'21%'},
+      {url:'/services',visits:5182,unique:4471,bounce:'41%',avgTime:'3m 28s',exit:'33%'},
+      {url:'/doctors',visits:4291,unique:3891,bounce:'35%',avgTime:'2m 58s',exit:'28%'},
+      {url:'/contact',visits:2847,unique:2632,bounce:'32%',avgTime:'2m 08s',exit:'30%'},
+    ],
+    geo:[
+      {flag:'🇺🇸',country:'United States',visits:16524,pct:89.5},
+      {flag:'🇨🇦',country:'Canada',visits:924,pct:5.0},
+      {flag:'🇬🇧',country:'United Kingdom',visits:369,pct:2.0},
+      {flag:'🇩🇪',country:'Germany',visits:277,pct:1.5},
+      {flag:'🇦🇺',country:'Australia',visits:185,pct:1.0},
+    ],
+    devices:{Desktop:64,Mobile:29,Tablet:7},
+    browsers:{Chrome:55,Safari:26,Firefox:12,Edge:5,Other:2},
+  }
+};
+
+function generateDailyData(base,variance,days=30){
+  const r=[];const labels=[];
+  const now=new Date();
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    r.push(Math.round(base+Math.sin(i*0.4)*variance+(Math.random()-0.5)*variance*0.5));
+  }
+  return{labels,data:r};
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let currentClient='c1';
+let charts={};
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+function init(){
+  renderClientList();
+  renderClientsGrid();
+  switchClient('c1');
+  startRealtime();
+  renderSetupScript();
+  renderLiveFeed();
+  renderReports();
+}
+
+function switchClient(id){
+  currentClient=id;
+  const c=clientData[id];
+  document.getElementById('topbar-client').textContent=c.name;
+  document.getElementById('topbar-domain').textContent=c.domain;
+  document.getElementById('sidebar-client-name').textContent=c.name;
+  document.getElementById('sidebar-client-domain').textContent=c.domain;
+  document.getElementById('sidebar-dot').style.background=c.color;
+  document.querySelectorAll('.client-item').forEach(el=>{
+    el.classList.toggle('selected',el.dataset.id===id);
+  });
+  renderOverview(id);
+  renderSources(id);
+  renderCampaigns(id);
+  renderPages(id);
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER CLIENT LIST (SIDEBAR)
+// ═══════════════════════════════════════════════════════════
+function renderClientList(){
+  const list=document.getElementById('client-list');
+  list.innerHTML=Object.entries(clientData).map(([id,c])=>`
+    <div class="client-item${id===currentClient?' selected':''}" data-id="${id}" onclick="switchClient('${id}')">
+      <div class="client-avatar" style="background:${c.color}20;color:${c.color}">
+        ${c.name.substring(0,2).toUpperCase()}
+      </div>
+      <div style="min-width:0;">
+        <div class="client-item-name">${c.name}</div>
+        <div class="client-item-plan">${c.plan}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER OVERVIEW
+// ═══════════════════════════════════════════════════════════
+function renderOverview(id){
+  const d=clientData[id];const o=d.overview;const t=o.trends;
+  document.getElementById('stats-grid').innerHTML=`
+    ${statCard('Total Visitors',o.totalVisitors.toLocaleString(),t.tv,'visitors')}
+    ${statCard('Unique Visitors',o.uniqueVisitors.toLocaleString(),t.uv,'visitors')}
+    ${statCard('Page Views',o.pageViews.toLocaleString(),t.pv,'views')}
+    ${statCard('Bounce Rate',o.bounceRate+'%',t.br,'vs last month',true)}
+    ${statCard('Conv. Rate',o.conversionRate+'%',t.cr,'vs last month')}
+  `;
+  const trend=generateDailyData(o.totalVisitors/30,o.totalVisitors/30*0.3);
+  destroyChart('trendChart');
+  const isDark=document.documentElement.dataset.theme==='dark';
+  const gl=document.getElementById('trendChart').getContext('2d');
+  const grad=gl.createLinearGradient(0,0,0,220);
+  grad.addColorStop(0,d.color+'44');grad.addColorStop(1,d.color+'00');
+  charts.trendChart=new Chart(gl,{
+    type:'line',
+    data:{labels:trend.labels,datasets:[{
+      label:'Visitors',data:trend.data,
+      borderColor:d.color,backgroundColor:grad,
+      borderWidth:2,fill:true,tension:0.4,
+      pointRadius:0,pointHoverRadius:4,
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:isDark?'#1a2235':'#fff',
+        titleColor:isDark?'#e4eaf8':'#0f172a',
+        bodyColor:isDark?'#6e7e9c':'#64748b',
+        borderColor:isDark?'rgba(255,255,255,0.13)':'rgba(0,0,0,0.1)',
+        borderWidth:0.5,padding:10,
+      }},
+      scales:{
+        x:{grid:{color:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)'},ticks:{color:'#6e7e9c',maxTicksLimit:7,font:{size:10}}},
+        y:{grid:{color:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)'},ticks:{color:'#6e7e9c',font:{size:10}}},
+      }
+    }
+  });
+  const srcs=d.sources;
+  const srcColors=srcs.map(s=>COLORS[s.key]||'#888');
+  destroyChart('sourceChart');
+  charts.sourceChart=new Chart(document.getElementById('sourceChart'),{
+    type:'doughnut',
+    data:{labels:srcs.map(s=>s.name),datasets:[{data:srcs.map(s=>s.pct),backgroundColor:srcColors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{
+      backgroundColor:isDark?'#1a2235':'#fff',titleColor:isDark?'#e4eaf8':'#0f172a',
+      bodyColor:isDark?'#6e7e9c':'#64748b',borderColor:isDark?'rgba(255,255,255,0.13)':'rgba(0,0,0,0.1)',borderWidth:0.5,
+    }}}
+  });
+  document.getElementById('source-legend').innerHTML=srcs.map((s,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${srcColors[i]}"></div>
+      <span class="legend-name">${s.name}</span>
+      <div class="legend-bar-wrap"><div class="legend-bar" style="width:${s.pct}%;background:${srcColors[i]}"></div></div>
+      <span class="legend-pct">${s.pct}%</span>
+    </div>
+  `).join('');
+  const dev=d.devices;
+  const devKeys=Object.keys(dev);const devVals=Object.values(dev);
+  const devCols=['#5b6cf0','#10b981','#f59e0b'];
+  destroyChart('deviceChart');
+  charts.deviceChart=new Chart(document.getElementById('deviceChart'),{
+    type:'bar',
+    data:{labels:devKeys,datasets:[{data:devVals,backgroundColor:devCols,borderRadius:6,borderWidth:0}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:isDark?'#1a2235':'#fff',titleColor:isDark?'#e4eaf8':'#0f172a',
+        bodyColor:isDark?'#6e7e9c':'#64748b',borderColor:isDark?'rgba(255,255,255,0.13)':'rgba(0,0,0,0.1)',borderWidth:0.5,
+        callbacks:{label:c=>`${c.raw}% of sessions`}
+      }},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#6e7e9c',font:{size:11}}},
+        y:{grid:{color:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)'},ticks:{color:'#6e7e9c',font:{size:10},callback:v=>v+'%'},max:80},
+      }
+    }
+  });
+  document.getElementById('geo-grid').innerHTML=d.geo.map(g=>`
+    <div class="geo-item">
+      <span class="geo-flag">${g.flag}</span>
+      <span class="geo-country">${g.country}</span>
+      <span class="geo-visits">${g.visits.toLocaleString()}</span>
+      <div class="geo-bar-wrap"><div class="geo-bar" style="width:${g.pct}%"></div></div>
+      <span class="geo-visits" style="width:40px;text-align:right;">${g.pct}%</span>
+    </div>
+  `).join('');
+  document.getElementById('top-pages-tbody').innerHTML=d.pages.slice(0,5).map(p=>`
+    <tr>
+      <td class="url-cell">${p.url}</td>
+      <td>${p.visits.toLocaleString()}</td>
+      <td>${p.unique.toLocaleString()}</td>
+      <td><span class="badge ${parseFloat(p.bounce)>50?'badge-warn':'badge-ok'}">${p.bounce}</span></td>
+      <td>${p.avgTime}</td>
+      <td><span style="color:var(--ok);font-size:11px;">↑</span></td>
+    </tr>
+  `).join('');
+}
+
+function statCard(label,value,trend,unit,invertTrend=false){
+  const up=trend>0;
+  const good=invertTrend?!up:up;
+  const color=good?'var(--ok)':'var(--err)';
+  const arrow=up?'▲':'▼';
+  return`<div class="stat-card">
+    <div class="stat-label">${label}</div>
+    <div class="stat-value">${value}</div>
+    <div class="stat-trend" style="color:${color}">${arrow} ${Math.abs(trend)}% <span style="color:var(--text-m)">${unit}</span></div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER SOURCES VIEW
+// ═══════════════════════════════════════════════════════════
+function renderSources(id){
+  const d=clientData[id];const srcs=d.sources;
+  const srcColors=srcs.map(s=>COLORS[s.key]||'#888');
+  document.getElementById('source-stat-cards').innerHTML=srcs.slice(0,4).map((s,i)=>`
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div style="width:6px;height:6px;border-radius:2px;background:${srcColors[i]};"></div>
+        <div class="stat-label" style="margin:0;">${s.name}</div>
+      </div>
+      <div class="stat-value" style="font-size:20px;">${s.visits.toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--text-m);">${s.pct}% of traffic · Conv ${s.conv}%</div>
+    </div>
+  `).join('');
+  destroyChart('sourcePieChart');
+  charts.sourcePieChart=new Chart(document.getElementById('sourcePieChart'),{
+    type:'doughnut',
+    data:{labels:srcs.map(s=>s.name),datasets:[{data:srcs.map(s=>s.pct),backgroundColor:srcColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}
+  });
+  const trendData=srcs.slice(0,3).map((s,i)=>{
+    const t=generateDailyData(s.visits/30,s.visits/30*0.4);
+    return{label:s.name,data:t.data,borderColor:srcColors[i],backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:0};
+  });
+  const labels=generateDailyData(1000,100).labels;
+  destroyChart('sourceTrendChart');
+  charts.sourceTrendChart=new Chart(document.getElementById('sourceTrendChart'),{
+    type:'line',
+    data:{labels,datasets:trendData},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{color:'#6e7e9c',boxWidth:10,font:{size:10}}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6e7e9c',maxTicksLimit:5,font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6e7e9c',font:{size:10}}},
+      }
+    }
+  });
+  document.getElementById('channel-tbody').innerHTML=srcs.map((s,i)=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:2px;background:${srcColors[i]};"></div>${s.name}</div></td>
+      <td>${s.visits.toLocaleString()}</td>
+      <td><div style="display:flex;align-items:center;gap:6px;">${s.pct}%<div style="flex:1;max-width:80px;height:4px;background:var(--border-s);border-radius:2px;overflow:hidden;"><div style="width:${s.pct}%;height:100%;background:${srcColors[i]};border-radius:2px;"></div></div></div></td>
+      <td><span class="badge ${s.bounce>50?'badge-warn':'badge-ok'}">${s.bounce}%</span></td>
+      <td>${s.conv}%</td>
+      <td>${s.revenue}</td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER CAMPAIGNS
+// ═══════════════════════════════════════════════════════════
+function renderCampaigns(id){
+  const d=clientData[id];
+  const totalConv=d.campaigns.reduce((a,c)=>a+c.conv,0);
+  const totalClicks=d.campaigns.reduce((a,c)=>a+c.clicks,0);
+  const avgCPA=d.campaigns.length>0?(d.campaigns.reduce((a,c)=>a+parseFloat(c.cpa.replace('$','')),0)/d.campaigns.length).toFixed(2):'0';
+  document.getElementById('campaign-metrics').innerHTML=`
+    ${statCard('Total Campaigns',d.campaigns.length,+12.5,'this month')}
+    ${statCard('Total Clicks',totalClicks.toLocaleString(),+8.3,'vs last month')}
+    ${statCard('Conversions',totalConv.toLocaleString(),+14.2,'vs last month')}
+    ${statCard('Avg. CPA','$'+avgCPA,-2.1,'vs last month',true)}
+  `;
+  const sourceColors={'Google':'#5b6cf0','Facebook':'#1877f2','Instagram':'#e1306c','LinkedIn':'#0a66c2','TikTok':'#ff0050','Email':'#a855f7'};
+  const statusClass={active:'badge-ok',paused:'badge-warn',ended:'badge-info'};
+  document.getElementById('campaign-tbody').innerHTML=d.campaigns.map(c=>`
+    <tr>
+      <td style="font-weight:500;">${c.name}</td>
+      <td><span class="badge" style="background:${(sourceColors[c.source]||'#888')+'22'};color:${sourceColors[c.source]||'#888'}">${c.source}</span></td>
+      <td><span class="badge badge-accent">${c.medium}</span></td>
+      <td>${c.clicks.toLocaleString()}</td>
+      <td>${c.conv.toLocaleString()}</td>
+      <td><span class="badge badge-ok">${c.convRate}</span></td>
+      <td>${c.cost}</td>
+      <td style="font-weight:500;">${c.cpa}</td>
+      <td><span class="badge ${statusClass[c.status]||'badge-info'}">${c.status}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER PAGES
+// ═══════════════════════════════════════════════════════════
+let allPagesData=[];
+function renderPages(id){
+  allPagesData=clientData[id].pages;
+  renderPagesTable(allPagesData);
+}
+function renderPagesTable(pages){
+  document.getElementById('all-pages-tbody').innerHTML=pages.map((p,i)=>`
+    <tr>
+      <td style="color:var(--text-m);">${i+1}</td>
+      <td class="url-cell">${p.url}</td>
+      <td>${p.visits.toLocaleString()}</td>
+      <td>${p.unique.toLocaleString()}</td>
+      <td><span class="badge ${parseFloat(p.bounce)>50?'badge-warn':'badge-ok'}">${p.bounce}</span></td>
+      <td>${p.avgTime}</td>
+      <td>${p.exit}</td>
+    </tr>
+  `).join('');
+}
+function filterPages(q){
+  renderPagesTable(allPagesData.filter(p=>p.url.includes(q)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER CLIENTS GRID
+// ═══════════════════════════════════════════════════════════
+function renderClientsGrid(){
+  document.getElementById('clients-grid').innerHTML=Object.entries(clientData).map(([id,c])=>`
+    <div class="client-card" onclick="switchClient('${id}');showView('overview',null)">
+      <div class="client-card-header">
+        <div class="client-card-avatar" style="background:${c.color};">${c.name.substring(0,2).toUpperCase()}</div>
+        <div class="client-card-status">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;"></span>
+          Active
+        </div>
+      </div>
+      <div class="client-card-name">${c.name}</div>
+      <div class="client-card-domain">${c.domain} · ${c.industry}</div>
+      <div class="client-card-stats">
+        <div class="client-stat">
+          <div class="client-stat-val">${(c.overview.totalVisitors/1000).toFixed(1)}k</div>
+          <div class="client-stat-lbl">Visitors</div>
+        </div>
+        <div class="client-stat">
+          <div class="client-stat-val">${c.overview.conversionRate}%</div>
+          <div class="client-stat-lbl">Conv. Rate</div>
+        </div>
+        <div class="client-stat">
+          <div class="client-stat-val">${c.overview.bounceRate}%</div>
+          <div class="client-stat-lbl">Bounce Rate</div>
+        </div>
+        <div class="client-stat">
+          <div class="client-stat-val">${c.plan}</div>
+          <div class="client-stat-lbl">Plan</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETUP / TRACKING SCRIPT
+// ═══════════════════════════════════════════════════════════
+function getTrackingScript(siteId,domain){
+  return`<span class="sc-comment">/**
+ * TrackPulse Analytics Pixel v1.0.0
+ * Site: ${domain} | ID: ${siteId}
+ * Tracks: pageviews, sessions, UTM params, referrers
+ * Docs: https://docs.trackpulse.io
+ */</span>
+<span class="sc-func">(function</span>(<span class="sc-key">w</span>,<span class="sc-key">d</span>,<span class="sc-key">s</span>,<span class="sc-key">id</span>) {
+  <span class="sc-comment">// Config</span>
+  <span class="sc-key">var</span> ENDPOINT = <span class="sc-str">'https://api.trackpulse.io/v1/collect'</span>;
+  <span class="sc-key">var</span> SITE_ID  = <span class="sc-str">'${siteId}'</span>;
+
+  <span class="sc-comment">// UTM parameter extraction</span>
+  <span class="sc-key">function</span> <span class="sc-func">getUTM</span>() {
+    <span class="sc-key">var</span> p = <span class="sc-key">new</span> URLSearchParams(w.location.search);
+    <span class="sc-key">return</span> {
+      source:   p.<span class="sc-func">get</span>(<span class="sc-str">'utm_source'</span>),
+      medium:   p.<span class="sc-func">get</span>(<span class="sc-str">'utm_medium'</span>),
+      campaign: p.<span class="sc-func">get</span>(<span class="sc-str">'utm_campaign'</span>),
+      term:     p.<span class="sc-func">get</span>(<span class="sc-str">'utm_term'</span>),
+      content:  p.<span class="sc-func">get</span>(<span class="sc-str">'utm_content'</span>)
+    };
+  }
+
+  <span class="sc-comment">// Traffic source detection from referrer</span>
+  <span class="sc-key">function</span> <span class="sc-func">detectSource</span>(ref, utm) {
+    <span class="sc-key">if</span> (utm.source) <span class="sc-key">return</span> utm.source;
+    <span class="sc-key">if</span> (!ref) <span class="sc-key">return</span> <span class="sc-str">'direct'</span>;
+    <span class="sc-key">var</span> r = ref.toLowerCase();
+    <span class="sc-key">if</span> (/google|bing|yahoo|duckduckgo/.test(r)) <span class="sc-key">return</span> <span class="sc-str">'organic'</span>;
+    <span class="sc-key">if</span> (/facebook|instagram|fb\.com/.test(r)) <span class="sc-key">return</span> <span class="sc-str">'facebook'</span>;
+    <span class="sc-key">if</span> (/twitter|x\.com/.test(r)) <span class="sc-key">return</span> <span class="sc-str">'twitter'</span>;
+    <span class="sc-key">if</span> (/linkedin/.test(r)) <span class="sc-key">return</span> <span class="sc-str">'linkedin'</span>;
+    <span class="sc-key">if</span> (/tiktok/.test(r)) <span class="sc-key">return</span> <span class="sc-str">'tiktok'</span>;
+    <span class="sc-key">return</span> <span class="sc-str">'referral'</span>;
+  }
+
+  <span class="sc-comment">// Device detection</span>
+  <span class="sc-key">function</span> <span class="sc-func">getDevice</span>() {
+    <span class="sc-key">var</span> ua = navigator.userAgent;
+    <span class="sc-key">if</span> (/Mobi|Android/i.test(ua)) <span class="sc-key">return</span> <span class="sc-str">'mobile'</span>;
+    <span class="sc-key">if</span> (/iPad|Tablet/i.test(ua)) <span class="sc-key">return</span> <span class="sc-str">'tablet'</span>;
+    <span class="sc-key">return</span> <span class="sc-str">'desktop'</span>;
+  }
+
+  <span class="sc-comment">// Collect and send event (uses sendBeacon for reliability)</span>
+  <span class="sc-key">function</span> <span class="sc-func">track</span>(eventType) {
+    <span class="sc-key">var</span> utm = <span class="sc-func">getUTM</span>();
+    <span class="sc-key">var</span> payload = {
+      siteId:    SITE_ID,
+      event:     eventType || <span class="sc-str">'pageview'</span>,
+      url:       w.location.href,
+      path:      w.location.pathname,
+      referrer:  d.referrer,
+      source:    <span class="sc-func">detectSource</span>(d.referrer, utm),
+      device:    <span class="sc-func">getDevice</span>(),
+      screen:    w.innerWidth + <span class="sc-str">'x'</span> + w.innerHeight,
+      lang:      navigator.language,
+      tz:        Intl.DateTimeFormat().<span class="sc-func">resolvedOptions</span>().timeZone,
+      utm:       utm,
+      ts:        Date.<span class="sc-func">now</span>()
+    };
+    <span class="sc-key">var</span> blob = <span class="sc-key">new</span> Blob([JSON.<span class="sc-func">stringify</span>(payload)],
+                 {type: <span class="sc-str">'application/json'</span>});
+    <span class="sc-key">if</span> (navigator.sendBeacon) {
+      navigator.<span class="sc-func">sendBeacon</span>(ENDPOINT, blob);
+    } <span class="sc-key">else</span> {
+      <span class="sc-func">fetch</span>(ENDPOINT, {method:<span class="sc-str">'POST'</span>,body:blob,keepalive:<span class="sc-num">true</span>});
+    }
+  }
+
+  <span class="sc-comment">// SPA route change support</span>
+  <span class="sc-key">var</span> _pushState = history.pushState;
+  history.pushState = <span class="sc-key">function</span>() {
+    _pushState.<span class="sc-func">apply</span>(history, arguments);
+    <span class="sc-func">track</span>(<span class="sc-str">'pageview'</span>);
+  };
+  w.<span class="sc-func">addEventListener</span>(<span class="sc-str">'popstate'</span>, () => <span class="sc-func">track</span>(<span class="sc-str">'pageview'</span>));
+
+  <span class="sc-comment">// Fire initial pageview</span>
+  <span class="sc-func">track</span>(<span class="sc-str">'pageview'</span>);
+
+  <span class="sc-comment">// Expose manual tracking API</span>
+  w.TrackPulse = {
+    track: <span class="sc-func">track</span>,
+    event: (<span class="sc-key">name</span>, props) => <span class="sc-func">track</span>({event: name, ...props})
+  };
+
+}(<span class="sc-key">window</span>, <span class="sc-key">document</span>, <span class="sc-str">'script'</span>, <span class="sc-str">'${siteId}'</span>));`;
+}
+
+function renderSetupScript(){
+  const c=clientData['c1'];
+  document.getElementById('script-code').innerHTML=getTrackingScript('tp_'+Math.random().toString(36).substr(2,12).toUpperCase(),c.domain);
+  document.getElementById('embed-id').textContent='tp_'+Math.random().toString(36).substr(2,12).toUpperCase();
+}
+
+function updateScript(){
+  const id=document.getElementById('script-client-select').value;
+  const c=clientData[id];
+  const siteId='tp_'+id.toUpperCase()+'_'+Math.random().toString(36).substr(2,8).toUpperCase();
+  document.getElementById('script-code').innerHTML=getTrackingScript(siteId,c.domain);
+  document.getElementById('embed-id').textContent=siteId;
+}
+
+function copyScript(){
+  const code=document.getElementById('script-code').innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.getElementById('copy-btn');
+    btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    btn.style.color='var(--ok)';
+    setTimeout(()=>{
+      btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Script';
+      btn.style.color='';
+    },2500);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// REAL-TIME
+// ═══════════════════════════════════════════════════════════
+const livePages=['/homepage','/pricing','/features','/demo','/blog/getting-started','/about'];
+const liveSources=['Google Ads','Organic SEO','Direct','Social Ads','Email'];
+const liveCountries=['🇺🇸 US','🇬🇧 UK','🇩🇪 DE','🇨🇦 CA','🇦🇺 AU'];
+const liveDevices=['Desktop','Mobile','Tablet'];
+
+function renderLiveFeed(){
+  const rows=Array.from({length:6},(_,i)=>`
+    <tr>
+      <td style="color:var(--text-m);">${i+1}</td>
+      <td class="url-cell">${livePages[Math.floor(Math.random()*livePages.length)]}</td>
+      <td><span class="badge badge-accent">${liveSources[Math.floor(Math.random()*liveSources.length)]}</span></td>
+      <td>${liveCountries[Math.floor(Math.random()*liveCountries.length)]}</td>
+      <td>${liveDevices[Math.floor(Math.random()*liveDevices.length)]}</td>
+      <td>${Math.floor(Math.random()*8)+1}m ${Math.floor(Math.random()*60)}s</td>
+    </tr>
+  `).join('');
+  document.getElementById('live-feed').innerHTML=rows;
+}
+
+function startRealtime(){
+  setInterval(()=>{
+    const count=Math.floor(Math.random()*8)+2;
+    document.getElementById('rt-big-count').textContent=count;
+    document.getElementById('rt-count').textContent=count+' live';
+    document.getElementById('rt-badge').textContent=count;
+    document.getElementById('rt-google').textContent=Math.floor(count*0.3);
+    document.getElementById('rt-seo').textContent=Math.floor(count*0.4);
+    document.getElementById('rt-social').textContent=Math.floor(count*0.2);
+    document.getElementById('rt-direct').textContent=Math.floor(count*0.1);
+    document.getElementById('rt-pv30').textContent=Math.floor(Math.random()*30)+35;
+    renderLiveFeed();
+  },4000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════════
+function renderReports(){
+  const seoData=generateDailyData(450,120);
+  const paidData=generateDailyData(580,180);
+  destroyChart('seoVsPaidChart');
+  const isDark=document.documentElement.dataset.theme==='dark';
+  charts.seoVsPaidChart=new Chart(document.getElementById('seoVsPaidChart'),{
+    type:'line',
+    data:{
+      labels:seoData.labels,
+      datasets:[
+        {label:'Organic SEO',data:seoData.data,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.08)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+        {label:'Paid Ads',data:paidData.data,borderColor:'#5b6cf0',backgroundColor:'rgba(91,108,240,0.08)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{color:'#6e7e9c',boxWidth:10,font:{size:10}}}},
+      scales:{
+        x:{grid:{color:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)'},ticks:{color:'#6e7e9c',maxTicksLimit:7,font:{size:10}}},
+        y:{grid:{color:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)'},ticks:{color:'#6e7e9c',font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showView(name, el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  else {
+    const navEl=document.getElementById('nav-'+name);
+    if(navEl) navEl.classList.add('active');
+  }
+  if(name==='reports') setTimeout(renderReports,100);
+}
+
+// ═══════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════
+function toggleTheme(){
+  const isDark=document.documentElement.dataset.theme==='dark';
+  document.documentElement.dataset.theme=isDark?'light':'dark';
+  document.getElementById('theme-label').textContent=isDark?'Dark Mode':'Light Mode';
+  document.getElementById('theme-icon').innerHTML=isDark?
+    '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':
+    '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  Object.values(charts).forEach(c=>{if(c)c.destroy();});
+  charts={};
+  const id=currentClient;
+  renderOverview(id);
+  renderSources(id);
+  setTimeout(renderReports,100);
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT MODAL
+// ═══════════════════════════════════════════════════════════
+function openAddClient(){document.getElementById('add-client-modal').classList.add('open');}
+function closeAddClient(){document.getElementById('add-client-modal').classList.remove('open');}
+function addClient(){
+  const name=document.getElementById('new-client-name').value||'New Client';
+  const url=document.getElementById('new-client-url').value||'example.com';
+  const domain=url.replace(/https?:\/\//,'').replace(/\//,'');
+  const id='c'+Date.now();
+  const colors=['#e879f9','#38bdf8','#fb7185','#34d399'];
+  const col=colors[Math.floor(Math.random()*colors.length)];
+  clientData[id]={
+    name,domain,industry:'Other',plan:'Starter',color:col,
+    overview:{totalVisitors:0,uniqueVisitors:0,pageViews:0,bounceRate:0,conversionRate:0,avgSession:'0m 0s',trends:{tv:0,uv:0,pv:0,br:0,cr:0}},
+    sources:[],campaigns:[],pages:[],geo:[],devices:{Desktop:60,Mobile:35,Tablet:5},browsers:{}
+  };
+  closeAddClient();
+  renderClientList();
+  renderClientsGrid();
+  showToast(`${name} added! Tracking pixel ready.`);
+  showView('setup',null);
+}
+function toggleClientDropdown(){showView('clients',null);}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function destroyChart(id){if(charts[id]){charts[id].destroy();charts[id]=null;}}
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+function copyShareLink(){
+  navigator.clipboard.writeText('https://app.trackpulse.io/share/'+Math.random().toString(36).substr(2,12));
+  showToast('Shareable link copied to clipboard!');
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
